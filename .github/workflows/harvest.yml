@@ -1,0 +1,42 @@
+load_env()  # API keys, folder IDs, thresholds
+
+harvester = VideoHarvester(
+  platforms=['tiktok', 'youtube', 'instagram', 'facebook'],
+  views_threshold={'tiktok':100k, ...},
+  max_video_age_days=30
+)
+
+# 1. اكتشاف الفيديوهات
+trending_videos = harvester.discover_trend_videos(niche, days=14)
+
+if not trending_videos:
+    log("لا توجد فيديوهات للرندر، جرب تخفيف العتبات")
+    exit()
+
+# 2. تحميل الفيديوهات
+downloaded = harvester.download_videos(trending_videos, max_per_platform=3)
+
+# 3. معالجة الفيديوهات
+processed = []
+for video in downloaded:
+    pv = harvester.process_video(
+      video.local_path,
+      watermark="@YourPage",
+      intro_text="🔥 شاهد حتى النهاية"
+    )
+    processed.append(pv)
+
+# 4. نشر شبه تلقائي
+for pv in processed:
+    for platform in platforms:
+        post = harvester.prepare_post(pv, platform)
+        # إما استخدام API مباشر أو توليد ملف جاهز:
+        feedback = harvester.publish_post(post, platform)
+        log(f"نشر على {platform}: {feedback}")
+
+# 5. التخزين والتنظيف
+harvester.upload_to_drive('./processed_videos', drive_folder_id)
+harvester.cleanup_local(days=7)
+harvester.cleanup_drive(days=30)
+
+log("انتهى الحصاد والنشر بنجاح!")
