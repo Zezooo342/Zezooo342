@@ -1,4 +1,4 @@
-name: 🚀 Smart Page Creator - نظام إدارة الصفحات الاجتماعية
+name: 🔥 Viral Video Intelligence - نظام اكتشاف الفيديوهات الرائجة
 
 on:
   push:
@@ -7,13 +7,13 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
     inputs:
-      topics:
-        description: 'المواضيع المطلوبة (مثل: التطوير الشخصي)'
+      niche:
+        description: 'مجال التخصص (مثل: تطوير الذات)'
         required: false
         default: 'تطوير الذات وريادة الأعمال'
 
 jobs:
-  create-content:
+  analyze-viral-content:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,23 +30,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: 🚀 تشغيل النظام الذكي
+    - name: 🔥 تشغيل نظام اكتشاف الفيديوهات الرائجة
       env:
         PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-        NICHE: ${{ github.event.inputs.topics || 'تطوير الذات وريادة الأعمال' }}
+        NICHE: ${{ github.event.inputs.niche || 'تطوير الذات وريادة الأعمال' }}
       run: |
         python smart_page_creator.py
 
-    - name: 📊 رفع النتائج
+    - name: 📊 رفع نتائج التحليل
       uses: actions/upload-artifact@v4
       with:
-        name: social-content-results
-        path: smart_publisher/
+        name: viral-content-analysis
+        path: viral_content/
 
     - name: 🌐 Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./smart_publisher/ready_posts
-        destination_dir: social-content
+        publish_dir: ./viral_content
+        destination_dir: viral-analysis
