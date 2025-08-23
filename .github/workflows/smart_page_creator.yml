@@ -1,0 +1,52 @@
+name: 🚀 Smart Page Creator - نظام إدارة الصفحات الاجتماعية
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      topics:
+        description: 'المواضيع المطلوبة (مثل: التطوير الشخصي)'
+        required: false
+        default: 'تطوير الذات وريادة الأعمال'
+
+jobs:
+  create-content:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout الكود
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: 📦 تثبيت المكتبات
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🚀 تشغيل النظام الذكي
+      env:
+        PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        NICHE: ${{ github.event.inputs.topics || 'تطوير الذات وريادة الأعمال' }}
+      run: |
+        python smart_page_creator.py
+
+    - name: 📊 رفع النتائج
+      uses: actions/upload-artifact@v3
+      with:
+        name: social-content-results
+        path: smart_publisher/
+
+    - name: 🌐 Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./smart_publisher/ready_posts
+        destination_dir: social-content
