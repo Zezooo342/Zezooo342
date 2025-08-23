@@ -53,7 +53,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: intelligent-harvest-results
-        path: intelligent_harvest/
+        path: Drive/intelligent_harvest/
 
     - name: 🌐 Deploy Dashboard to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
