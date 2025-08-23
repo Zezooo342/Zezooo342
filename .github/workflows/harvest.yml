@@ -1,42 +1,49 @@
-load_env()  # API keys, folder IDs, thresholds
-
-harvester = VideoHarvester(
-  platforms=['tiktok', 'youtube', 'instagram', 'facebook'],
-  views_threshold={'tiktok':100k, ...},
-  max_video_age_days=30
-)
-
-# 1. اكتشاف الفيديوهات
-trending_videos = harvester.discover_trend_videos(niche, days=14)
-
-if not trending_videos:
-    log("لا توجد فيديوهات للرندر، جرب تخفيف العتبات")
-    exit()
-
-# 2. تحميل الفيديوهات
-downloaded = harvester.download_videos(trending_videos, max_per_platform=3)
-
-# 3. معالجة الفيديوهات
-processed = []
-for video in downloaded:
-    pv = harvester.process_video(
-      video.local_path,
-      watermark="@YourPage",
-      intro_text="🔥 شاهد حتى النهاية"
-    )
-    processed.append(pv)
-
-# 4. نشر شبه تلقائي
-for pv in processed:
-    for platform in platforms:
-        post = harvester.prepare_post(pv, platform)
-        # إما استخدام API مباشر أو توليد ملف جاهز:
-        feedback = harvester.publish_post(post, platform)
-        log(f"نشر على {platform}: {feedback}")
-
-# 5. التخزين والتنظيف
-harvester.upload_to_drive('./processed_videos', drive_folder_id)
-harvester.cleanup_local(days=7)
-harvester.cleanup_drive(days=30)
-
-log("انتهى الحصاد والنشر بنجاح!")
+name: 🔥 Harvest Viral Videos
+on:
+  push: { branches: [ main, master ] }
+  schedule: [{ cron: '0 */6 * * *' }]
+  workflow_dispatch:
+    inputs:
+      niche:
+        description: 'مجال التخصص'
+        required: false
+        default: 'تطوير الذات'
+      platforms:
+        description: 'منصات (مفصولة بفواصل)'
+        required: false
+        default: 'tiktok,youtube'
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: '3.9' }
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Harvester
+        env:
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          TIKTOK_MIN_VIEWS: ${{ secrets.TIKTOK_MIN_VIEWS }}
+          YOUTUBE_MIN_VIEWS: ${{ secrets.YOUTUBE_MIN_VIEWS }}
+          MAX_VIDEO_AGE_DAYS: ${{ secrets.MAX_VIDEO_AGE_DAYS }}
+          TARGET_PLATFORMS: ${{ secrets.TARGET_PLATFORMS }}
+          NICHE: ${{ secrets.NICHE }}
+        run: python smart_page_creator.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harvest-results
+          path: intelligent_harvest/
+          if-no-files-found: warn
+      - uses: peaceiris/actions-gh-pages@v3
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./intelligent_harvest
+          destination_dir: video-harvest
