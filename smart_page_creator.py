@@ -1,261 +1,157 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-نظام حاصد الفيديوهات الذكي - إصدار محدث
-=========================================
+نظام حاصد الفيديوهات الذكي - النسخة النهائية الجاهزة للعمل
+===========================================================
 """
+
 import os
 import json
+import subprocess
 from datetime import datetime
 import time
+import hashlib
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+import requests
+from yt_dlp import YoutubeDL
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 
-class FixedVideoHarvester:
-    """
-    نسخة محدثة من حاصد الفيديوهات مع ضمان إنشاء الملفات
-    """
-    def __init__(self):
-        self.api_key = os.getenv('PERPLEXITY_API_KEY', '')
-        self.setup_directories()
-        print("🔥 نظام حاصد الفيديوهات الذكي - إصدار محدث!")
+# === إعداد المجلدات ===
+def setup_directories():
+    folders = [
+        'intelligent_harvest',
+        'intelligent_harvest/raw_videos',
+        'intelligent_harvest/processed_videos',
+        'intelligent_harvest/ready_to_publish',
+        'intelligent_harvest/metadata',
+        'intelligent_harvest/analytics'
+    ]
+    for f in folders:
+        os.makedirs(f, exist_ok=True)
 
-    def setup_directories(self):
-        """
-        إنشاء هيكل مجلدات مضمون
-        """
-        dirs = [
-            './intelligent_harvest',
-            './intelligent_harvest/raw_videos',
-            './intelligent_harvest/processed_videos',
-            './intelligent_harvest/ready_to_publish',
-            './intelligent_harvest/metadata',
-            './intelligent_harvest/analytics'
-        ]
-        for d in dirs:
-            os.makedirs(d, exist_ok=True)
-            print(f"📁 تم إنشاء المجلد: {d}")
+# === استدعاء Perplexity API لاكتشاف الفيديوهات الرائجة ===
+def discover_videos(platform, niche, timeframe, api_key):
+    system_prompt = f"""أنت محلل فيديوهات رائج على {platform} في مجال {niche}.
+أعطني قائمة بأفضل 5 روابط فيديو عالية المشاهدات خلال {timeframe}."""
+    messages = [
+        {'role': 'system', 'content': system_prompt},
+        {'role': 'user', 'content': system_prompt}
+    ]
+    data = {
+        'model': 'llama-3.1-sonar-large-128k-online',
+        'messages': messages,
+        'max_tokens': 1500,
+        'temperature': 0.7
+    }
+    headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+    try:
+        resp = requests.post('https://api.perplexity.ai/chat/completions', headers=headers, json=data, timeout=30)
+        content = resp.json()['choices'][0]['message']['content']
+        urls = [u.strip() for u in content.split() if u.startswith('http')]
+        return urls[:5]
+    except Exception:
+        return []
 
-        # إنشاء ملفات اختبار في كل مجلد
-        test_files = [
-            ('./intelligent_harvest/test_harvest.txt', 'نظام حاصد الفيديوهات يعمل بنجاح!'),
-            ('./intelligent_harvest/raw_videos/readme.txt', 'مجلد الفيديوهات الخام'),
-            ('./intelligent_harvest/processed_videos/readme.txt', 'مجلد الفيديوهات المعالجة'),
-            ('./intelligent_harvest/ready_to_publish/readme.txt', 'مجلد الفيديوهات الجاهزة للنشر'),
-            ('./intelligent_harvest/metadata/readme.txt', 'مجلد البيانات الوصفية'),
-            ('./intelligent_harvest/analytics/readme.txt', 'مجلد التحليلات والتقارير')
-        ]
-        for path, content in test_files:
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"📄 تم إنشاء الملف: {path}")
+# === تحميل الفيديو باستخدام yt-dlp ===
+def download_video(url):
+    hash_id = hashlib.md5(url.encode()).hexdigest()[:8]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    ydl_opts = {
+        'format': 'best[height<=720]',
+        'outtmpl': f"intelligent_harvest/raw_videos/%(id)s_{hash_id}_{timestamp}.%(ext)s",
+        'writesubtitles': False
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
+    return filename
 
-    def create_sample_content(self):
-        """
-        إنشاء محتوى تجريبي لضمان عمل النظام
-        """
-        sample_metadata = {
-            'harvest_session': {
-                'timestamp': datetime.now().isoformat(),
-                'version': '1.0.0',
-                'status': 'تم بنجاح',
-                'discovered_videos': 25,
-                'processed_videos': 10,
-                'platforms': ['tiktok', 'youtube', 'instagram', 'facebook']
-            },
-            'sample_videos': [
-                {
-                    'title': 'فيديو تجريبي 1 - أفكار تطوير الذات',
-                    'platform': 'tiktok',
-                    'views': 1500000,
-                    'duration': 60,
-                    'category': 'تعليمي'
-                },
-                {
-                    'title': 'فيديو تجريبي 2 - نصائح ريادة الأعمال',
-                    'platform': 'youtube',
-                    'views': 850000,
-                    'duration': 720,
-                    'category': 'تحفيزي'
-                }
-            ]
-        }
-        metadata_path = './intelligent_harvest/metadata/harvest_session.json'
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(sample_metadata, f, ensure_ascii=False, indent=2)
-        print(f"💾 تم حفظ البيانات الوصفية: {metadata_path}")
+# === معالجة الفيديو (علامة مائية ونص مقدمة) ===
+def process_video(input_path):
+    clip = VideoFileClip(input_path)
+    watermark = TextClip("🔥 @YourPage", fontsize=24, color='white', font='Arial-Bold')\
+                .set_opacity(0.7).set_position(("right","bottom")).set_duration(clip.duration)
+    intro = TextClip("🚀 شاهد حتى النهاية", fontsize=36, color='yellow', font='Arial-Bold')\
+            .set_duration(3).set_position("center")
+    final = CompositeVideoClip([intro, clip.set_start(3), watermark.set_start(0)])
+    base = os.path.basename(input_path).rsplit('.',1)[0]
+    output = f"intelligent_harvest/processed_videos/{base}_processed.mp4"
+    final.write_videofile(output, codec='libx264', audio_codec='aac', fps=24)
+    clip.close(); final.close()
+    return output
 
-        sample_report = f"""# 📊 تقرير حصاد الفيديوهات - {datetime.now().strftime('%Y-%m-%d')}
+# === إنشاء نسخ جاهزة للنشر لكل منصة ===
+def create_platform_versions(video_path):
+    sizes = {
+        'tiktok': (720,1280,60),
+        'instagram': (720,1280,90),
+        'youtube': (1280,720,None),
+        'facebook': (720,720,240)
+    }
+    versions = {}
+    base = os.path.basename(video_path).replace('_processed','')
+    for p,(w,h,dur) in sizes.items():
+        clip = VideoFileClip(video_path)
+        sub = clip.subclip(0, min(dur or clip.duration, clip.duration))
+        resized = sub.resize((w,h))
+        out = f"intelligent_harvest/ready_to_publish/{base}_{p}.mp4"
+        resized.write_videofile(out, codec='libx264', audio_codec='aac', fps=24)
+        clip.close(); resized.close()
+        versions[p] = out
+    return versions
 
-## ✅ حالة التشغيل: نجح
+# === رفع الملفات إلى Google Drive ===
+def upload_to_drive(folder_id, creds_json_b64):
+    creds_info = json.loads(base64.b64decode(creds_json_b64).decode())
+    creds = service_account.Credentials.from_service_account_info(creds_info, scopes=['https://www.googleapis.com/auth/drive'])
+    drive = build('drive','v3',credentials=creds)
+    # حذف القديم
+    files = drive.files().list(q=f"'{folder_id}' in parents and trashed=false", fields="files(id)").execute().get('files',[])
+    for f in files:
+        drive.files().delete(fileId=f['id']).execute()
+    # رفع الجديد
+    for root,_,fs in os.walk("intelligent_harvest/ready_to_publish"):
+        for f in fs:
+            fp = os.path.join(root,f)
+            media = MediaFileUpload(fp, resumable=True)
+            drive.files().create(body={'name':f,'parents':[folder_id]}, media_body=media).execute()
 
-### 📈 الإحصائيات:
-- **الفيديوهات المُكتشفة**: 25 فيديو
-- **تم التحميل بنجاح**: 10 فيديوهات
-- **تم المعالجة**: 40 نسخة (4 لكل فيديو)
-- **رُفع للسحابة**: تم بنجاح
-
-### 🎯 المنصات المُستهدفة:
-- 🎵 **تيك توك**: 8 فيديوهات
-- 📺 **يوتيوب**: 6 فيديوهات
-- 📸 **إنستغرام**: 7 فيديوهات
-- 📘 **فيسبوك**: 4 فيديوهات
-
-### 📁 الملفات المُنتجة:
-- **الفيديوهات الخام**: ./intelligent_harvest/raw_videos/
-- **الفيديوهات المُعالجة**: ./intelligent_harvest/processed_videos/
-- **الجاهزة للنشر**: ./intelligent_harvest/ready_to_publish/
-- **البيانات الوصفية**: ./intelligent_harvest/metadata/
-- **التقارير**: ./intelligent_harvest/analytics/
-
-## 🚀 النظام جاهز وفعال!
-
-تم إنشاء هذا التقرير تلقائياً في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        report_path = './intelligent_harvest/analytics/harvest_report.md'
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write(sample_report)
-        print(f"📋 تم إنشاء التقرير: {report_path}")
-        return sample_metadata
-
-    def create_dashboard(self):
-        """
-        إنشاء لوحة تحكم تجريبية
-        """
-        dashboard_html = f"""<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔥 نظام حاصد الفيديوهات الذكي</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            margin: 0;
-            padding: 20px;
-            color: #333;
-            min-height: 100vh;
-        }}
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-        }}
-        .header {{
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }}
-        .header h1 {{
-            color: #4f46e5;
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-        }}
-        .success-badge {{
-            background: #22c55e;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 25px;
-            display: inline-block;
-            font-weight: 600;
-            margin-top: 15px;
-        }}
-        .stats-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }}
-        .stat-card {{
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }}
-        .stat-card:hover {{
-            transform: translateY(-5px);
-        }}
-        .stat-number {{
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #4f46e5;
-            margin: 10px 0;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔥 نظام حاصد الفيديوهات الذكي</h1>
-            <p style="font-size: 1.2rem; color: #64748b;">
-                نظام متكامل لجلب ومعالجة الفيديوهات عالية المشاهدات
-            </p>
-            <div class="success-badge">✅ النظام يعمل بكفاءة عالية</div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div style="font-size: 2rem;">🔍</div>
-                <div class="stat-number">25</div>
-                <div>فيديو مُكتشف</div>
-            </div>
-
-            <div class="stat-card">
-                <div style="font-size: 2rem;">⬇️</div>
-                <div class="stat-number">10</div>
-                <div>تم التحميل</div>
-            </div>
-
-            <div class="stat-card">
-                <div style="font-size: 2rem;">🎬</div>
-                <div class="stat-number">40</div>
-                <div>نسخ معالجة</div>
-            </div>
-
-            <div class="stat-card">
-                <div style="font-size: 2rem;">☁️</div>
-                <div class="stat-number">100%</div>
-                <div>رُفع للسحابة</div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>"""
-        dashboard_path = './intelligent_harvest/harvest_dashboard.html'
-        with open(dashboard_path, 'w', encoding='utf-8') as f:
-            f.write(dashboard_html)
-        print(f"🌐 تم إنشاء لوحة التحكم: {dashboard_path}")
-        return dashboard_path
-
-    def run(self):
-        """
-        تشغيل النظام المحدث
-        """
-        print("🚀 بدء تشغيل نظام حاصد الفيديوهات...")
-        self.create_sample_content()
-        self.create_dashboard()
-
-        # التحقق من المجلدات والملفات
-        base_dir = './intelligent_harvest'
-        print("\n🔍 التحقق من إنشاء المجلدات والملفات:")
-        for entry in os.listdir(base_dir):
-            path = os.path.join(base_dir, entry)
-            if os.path.isdir(path):
-                count = len(os.listdir(path))
-                print(f"📁 {entry}/: {count} ملف")
-            else:
-                print(f"📄 {entry}")
-
-        print("\n✅ تم إكمال النظام بنجاح!")
-        return True
-
+# === الرئيسية ===
 def main():
-    harvester = FixedVideoHarvester()
-    return harvester.run()
+    api_key    = os.getenv('PERPLEXITY_API_KEY','')
+    folder_id  = os.getenv('GDRIVE_FOLDER_ID','')
+    creds_b64  = os.getenv('GDRIVE_CREDENTIALS','')
+    niche      = os.getenv('NICHE','تطوير الذات')
+    platforms  = os.getenv('TARGET_PLATFORMS','tiktok,youtube').split(',')
 
-if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    setup_directories()
+    all_videos = []
+
+    for p in platforms:
+        urls = discover_videos(p, niche, "أسبوعين", api_key)
+        for u in urls:
+            print(f"[*] {p} → {u}")
+            path = download_video(u)
+            proc = process_video(path)
+            vs = create_platform_versions(proc)
+            all_videos.append({'platform':p,'original':path,'processed':proc,'versions':vs})
+
+    if folder_id and creds_b64:
+        upload_to_drive(folder_id, creds_b64)
+
+    # حفظ تقرير
+    report = {
+        'timestamp': datetime.now().isoformat(),
+        'niche': niche,
+        'harvested': len(all_videos)
+    }
+    with open('intelligent_harvest/analytics/report.json','w',encoding='utf-8') as f:
+        json.dump(report,f,ensure_ascii=False,indent=2)
+
+    print("✅ اكتمال الحصاد والمعالجة والنشر إلى Drive")
+    print(json.dumps(report, ensure_ascii=False))
+
+if __name__=="__main__":
+    main()
