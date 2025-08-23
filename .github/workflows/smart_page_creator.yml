@@ -49,11 +49,24 @@ jobs:
       run: |
         python smart_page_creator.py
 
+    - name: 📋 عرض محتويات المجلد المُنشأ
+      run: |
+        echo "📂 محتويات المستودع:"
+        ls -la
+        if [ -d "intelligent_harvest" ]; then
+          echo "✅ تم إنشاء مجلد intelligent_harvest"
+          echo "📁 محتويات المجلد:"
+          ls -la intelligent_harvest/
+        else
+          echo "❌ لم يتم إنشاء مجلد intelligent_harvest"
+        fi
+
     - name: 📊 رفع نتائج الحصاد
       uses: actions/upload-artifact@v4
       with:
         name: intelligent-harvest-results
-        path: MyDrive/intelligent_harvest/
+        path: intelligent_harvest/
+        if-no-files-found: warn
 
     - name: 🌐 Deploy Dashboard to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
