@@ -142,4 +142,4 @@ class IntelligentVideoHarvester:
         return True
 
 if __name__ == "__main__":
-    SimpleVideoHarvester().run()
+    Harveste().run()
