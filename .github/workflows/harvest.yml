@@ -1,34 +1,48 @@
-name: 🔥 Harvest Viral Videos
+name: 🔥 Intelligent Video Harvester - نظام حاصد الفيديوهات الذكي
+
 on:
-  push: { branches: [ main, master ] }
-  schedule: [{ cron: '0 */6 * * *' }]
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 */6 * * *'  # تشغيل كل 6 ساعات
   workflow_dispatch:
     inputs:
       niche:
-        description: 'مجال التخصص'
+        description: 'مجال التخصص (مثال: تطوير الذات)'
         required: false
         default: 'تطوير الذات'
       platforms:
-        description: 'منصات (مفصولة بفواصل)'
+        description: 'المنصات المستهدفة مفصولة بفواصل (مثال: tiktok,youtube)'
         required: false
-        default: 'tiktok,youtube'
+        default: 'tiktok,youtube,instagram,facebook'
+
 jobs:
   harvest:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with: { python-version: '3.9' }
-      - run: |
+      - name: 📥 Checkout الكود
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 🎬 تثبيت FFmpeg لمعالجة الفيديو
+        run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        # تثبيت صريح لضمان توفر moviepy
-        pip install moviepy
-    - name: |
+      - name: 📦 تثبيت المكتبات المطلوبة
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install moviepy
+
+      - name: 🔥 تشغيل نظام حاصد الفيديوهات
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
@@ -36,15 +50,24 @@ jobs:
           TIKTOK_MIN_VIEWS: ${{ secrets.TIKTOK_MIN_VIEWS }}
           YOUTUBE_MIN_VIEWS: ${{ secrets.YOUTUBE_MIN_VIEWS }}
           MAX_VIDEO_AGE_DAYS: ${{ secrets.MAX_VIDEO_AGE_DAYS }}
-          TARGET_PLATFORMS: ${{ secrets.TARGET_PLATFORMS }}
-          NICHE: ${{ secrets.NICHE }}
+          TARGET_PLATFORMS: ${{ github.event.inputs.platforms || secrets.TARGET_PLATFORMS }}
+          NICHE: ${{ github.event.inputs.niche || secrets.NICHE }}
         run: python smart_page_creator.py
-      - uses: actions/upload-artifact@v4
+
+      - name: 📂 عرض محتويات المجلد
+        run: |
+          echo "📁 محتويات intelligent_harvest/"
+          ls -R intelligent_harvest/
+
+      - name: 📊 رفع نتائج الحصاد
+        uses: actions/upload-artifact@v4
         with:
           name: harvest-results
           path: intelligent_harvest/
           if-no-files-found: warn
-      - uses: peaceiris/actions-gh-pages@v3
+
+      - name: 🌐 Deploy Dashboard to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         if: startsWith(github.ref, 'refs/heads/')
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
