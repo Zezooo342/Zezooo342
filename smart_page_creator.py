@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-📥 نظام ذكي لتحميل الفيديوهات عبر Perplexity API فقط – مع تصحيح تهيئة المفتاح
+📥 نظام ذكي لتحميل الفيديوهات عبر Perplexity API فقط
 ===================================================
-يزيل الفراغات والأسطر الفارغة من قيمة API_KEY قبل الاستخدام.
+يرفع ترميز stdout إلى UTF-8 ويتعامل مع الأخطاء ويحفظ النتائج كاملة.
 """
 
 import os
 import re
+import sys
 import requests
 from datetime import datetime
 from typing import List
+
+# تأكد من أن الإخراج يدعم UTF-8
+sys.stdout.reconfigure(encoding='utf-8')
 
 API_URL = "https://api.perplexity.ai/chat/completions"
 MODEL   = "llama-3.1-sonar-large-128k-online"
 
 def get_api_key() -> str:
-    key = os.getenv("PERPLEXITY_API_KEY", "")
-    key = key.strip()                 # إزالة الفراغات من البداية والنهاية
-    key = key.replace("\n", "")       # إزالة جميع الأسطر الفارغة
+    key = os.getenv("PERPLEXITY_API_KEY", "").strip().replace("\n", "")
     if not key:
         raise RuntimeError("🔑 متغير PERPLEXITY_API_KEY غير مضبوط أو فارغ")
     return key
