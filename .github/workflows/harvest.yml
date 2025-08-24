@@ -1,75 +1,99 @@
-name: 🔥 Intelligent Video Harvester - نظام حاصد الفيديوهات الذكي
+name: 🧠 AI-Powered Intelligent Video Harvester - النظام الذكي المتطور
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   schedule:
-    - cron: '0 */6 * * *'  # تشغيل كل 6 ساعات
+    - cron: '0 */6 * * *'  # تحديث ذكي كل 6 ساعات
   workflow_dispatch:
     inputs:
       niche:
-        description: 'مجال التخصص (مثال: تطوير الذات)'
+        description: 'مجال التخصص للتعلم الذكي'
         required: false
         default: 'تطوير الذات'
       platforms:
-        description: 'المنصات المستهدفة مفصولة بفواصل (مثال: tiktok,youtube)'
+        description: 'المنصات للتحليل الذكي'
         required: false
         default: 'tiktok,youtube,instagram,facebook'
+      learning_mode:
+        description: 'نمط التعلم (adaptive/aggressive/conservative)'
+        required: false
+        default: 'adaptive'
 
 jobs:
-  harvest:
+  intelligent-harvest:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - name: 📥 Checkout الكود
+      - name: 🧠 Initialize AI Environment
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python
+      - name: 🐍 Setup Advanced Python Environment
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+          cache: 'pip'
 
-      - name: 🎬 تثبيت FFmpeg لمعالجة الفيديو
+      - name: 🎬 Install Advanced Media Processing Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg sqlite3
+          ffmpeg -version
 
-      - name: 📦 تثبيت المكتبات المطلوبة
+      - name: 📦 Install AI Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install moviepy
+          pip install scikit-learn pandas matplotlib seaborn
 
-      - name: 🔥 تشغيل نظام حاصد الفيديوهات
+      - name: 🧠 Run Intelligent Harvesting System
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-          TIKTOK_MIN_VIEWS: ${{ secrets.TIKTOK_MIN_VIEWS }}
-          YOUTUBE_MIN_VIEWS: ${{ secrets.YOUTUBE_MIN_VIEWS }}
-          MAX_VIDEO_AGE_DAYS: ${{ secrets.MAX_VIDEO_AGE_DAYS }}
-          TARGET_PLATFORMS: ${{ github.event.inputs.platforms || secrets.TARGET_PLATFORMS }}
-          NICHE: ${{ github.event.inputs.niche || secrets.NICHE }}
-        run: python smart_page_creator.py
-
-      - name: 📂 عرض محتويات المجلد
+          NICHE: ${{ github.event.inputs.niche || 'تطوير الذات' }}
+          TARGET_PLATFORMS: ${{ github.event.inputs.platforms || 'tiktok,youtube,instagram,facebook' }}
+          LEARNING_MODE: ${{ github.event.inputs.learning_mode || 'adaptive' }}
+          AI_OPTIMIZATION: 'enabled'
+          SELF_IMPROVEMENT: 'active'
         run: |
-          echo "📁 محتويات intelligent_harvest/"
-          ls -R intelligent_harvest/
+          echo "🧠 بدء النظام الذكي المتطور ذاتياً..."
+          echo "🎯 المجال: ${{ github.event.inputs.niche || 'تطوير الذات' }}"
+          echo "🔬 نمط التعلم: ${{ github.event.inputs.learning_mode || 'adaptive' }}"
+          python smart_page_creator.py
 
-      - name: 📊 رفع نتائج الحصاد
+      - name: 📊 AI Performance Analysis
+        run: |
+          echo "🧠 تحليل أداء الذكاء الاصطناعي:"
+          find intelligent_harvest -name "*.db" -exec echo "📊 قاعدة بيانات التعلم: {}" \;
+          find intelligent_harvest/performance_reports -name "*.md" | head -3
+          echo "🔮 رؤى الذكاء الاصطناعي:"
+          find intelligent_harvest/ai_insights -type f | wc -l
+          echo "📈 معدل التحسن الذكي:"
+          find intelligent_harvest/adaptation_logs -type f | wc -l
+
+      - name: 🚀 Upload AI-Enhanced Results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: harvest-results
+          name: intelligent-harvest-ai-results-${{ github.run_number }}
           path: intelligent_harvest/
-          if-no-files-found: warn
+          retention-days: 14
+          if-no-files-found: error
 
-      - name: 🌐 Deploy Dashboard to GitHub Pages
+      - name: 🌐 Deploy Intelligent Dashboard
         uses: peaceiris/actions-gh-pages@v3
-        if: startsWith(github.ref, 'refs/heads/')
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./intelligent_harvest
-          destination_dir: video-harvest
+          destination_dir: intelligent-video-ai
+
+      - name: 🎊 AI Success Notification
+        if: success()
+        run: |
+          echo "🧠✅ النظام الذكي يعمل بنجاح ويتطور ذاتياً!"
+          echo "🔮 لوحة التحكم الذكية: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/intelligent-video-ai/intelligent_dashboard.html"
+          echo "📊 تقارير الذكاء الاصطناعي متاحة في الـ Artifacts"
+          echo "🚀 النظام يتعلم ويتحسن تلقائياً مع كل تشغيل"
