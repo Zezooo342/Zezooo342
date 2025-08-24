@@ -32,7 +32,7 @@ jobs:
       - name: Run Harvester
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-          NICHE: تطوير الذات
+          NICHE: ضحك
           TARGET_PLATFORMS: tiktok,youtube,instagram,facebook
         run: python smart_page_creator.py
 
