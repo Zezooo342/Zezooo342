@@ -16,7 +16,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 {
   "query": "List top 5 trending tiktok & facebook & instgram videos in comedy niche with direct .mp4 links."
-  "model": "llama-3.1-sonar-large-128k-online",
+  "model": "llama-3.1-sonar-large-128k-online"
 }
 
 def get_api_key() -> str:
