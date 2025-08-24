@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🧠 Smart Viral Video Harvester – التصحيح النهائي
-يعتمد على Perplexity Pro API بالشكل الصحيح بدون أخطاء صياغة.
+🧠 Smart Viral Video Harvester
+يعتمد على Perplexity Pro API بالشكل الصحيح.
 """
 
 import os
@@ -12,7 +12,6 @@ import requests
 from datetime import datetime
 from typing import List, Dict
 
-# دعم UTF-8 للإخراج
 sys.stdout.reconfigure(encoding='utf-8')
 
 API_URL = "https://api.perplexity.ai/chat/completions"
@@ -35,10 +34,10 @@ def fetch_top_videos(platform: str, niche: str, api_key: str) -> List[Dict]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-payload = {
-    "model": MODEL,
-    "prompt": prompt
-}
+    payload = {
+        "model": MODEL,
+        "prompt": prompt
+    }
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
     content = resp.json()["choices"][0]["message"]["content"]
