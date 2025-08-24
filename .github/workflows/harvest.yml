@@ -1,16 +1,28 @@
 name: 🔥 Smart Viral Harvester
-on: workflow_dispatch
+
+on:
+  workflow_dispatch:
+
 jobs:
   harvest:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-      -  with: python-version: 3.11
-      - run: |
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - env:
+
+      - name: Run Smart Viral Harvester
+        env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           NICHE: ${{ secrets.NICHE }}
           TARGET_PLATFORMS: ${{ secrets.TARGET_PLATFORMS }}
