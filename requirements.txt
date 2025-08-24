@@ -1,11 +1,11 @@
 moviepy>=2.2.1
 yt-dlp
 instaloader
-requests
 beautifulsoup4
 tqdm
-numpy
 pillow
 google-api-python-client
 google-auth
 google-auth-oauthlib
+requests>=2.31.0
+numpy>=1.24.0
