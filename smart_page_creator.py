@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🧠 Smart Viral Video Harvester – تصحيح نهائي لمشكلة latin-1
+🧠 Smart Viral Video Harvester – التصحيح النهائي
+يعتمد على Perplexity Pro API بالشكل الصحيح بدون أخطاء صياغة.
 """
 
 import os
@@ -14,22 +15,18 @@ from typing import List, Dict
 # دعم UTF-8 للإخراج
 sys.stdout.reconfigure(encoding='utf-8')
 
-{
-  "query": "List top 5 trending tiktok & facebook & instgram videos in comedy niche with direct .mp4 links."
-  "model": "llama-3.1-sonar-large-128k-online"
-}
+API_URL = "https://api.perplexity.ai/chat/completions"
+MODEL   = "llama-3.1-sonar-large-128k-online"
 
 def get_api_key() -> str:
     raw = os.getenv("PERPLEXITY_API_KEY", "")
-    # قم بإزالة جميع الفراغات والأسطر الفارغة
     key = re.sub(r'\s+', '', raw)
-    # اترك فقط ASCII
     key = ''.join(c for c in key if ord(c) < 128)
     if not key:
         raise RuntimeError("🔑 PERPLEXITY_API_KEY غير مضبوط أو غير صالح")
     return key
 
-def fetch_top_videos(platform: str, niche: str, api_key: str):
+def fetch_top_videos(platform: str, niche: str, api_key: str) -> List[Dict]:
     prompt = (
         f"List top 5 trending {platform} videos in the {niche} niche "
         "with direct .mp4 download URLs."
@@ -44,7 +41,9 @@ def fetch_top_videos(platform: str, niche: str, api_key: str):
     }
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
-    # … بقية المعالجة كما هو  
+    content = resp.json()["choices"][0]["message"]["content"]
+    urls = re.findall(r'https?://\S+?\.mp4', content)
+    return [{"url": url, "title": f"video_{i+1}"} for i, url in enumerate(urls[:5])]
 
 def download_video(url: str, dest: str, name: str) -> str:
     os.makedirs(dest, exist_ok=True)
@@ -63,48 +62,50 @@ def create_dummy(dest: str, name: str) -> str:
     header = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
     with open(path, "wb") as f:
         f.write(header)
-        f.write(b"\x00" * 100000)
+        f.write(b"\x00" * 100_000)
     return path
 
 def main():
     api_key = get_api_key()
     niche = os.getenv("NICHE", "comedy").strip()
-    plats = [p.strip() for p in os.getenv("TARGET_PLATFORMS","tiktok,youtube").split(",")]
+    platforms = [p.strip() for p in os.getenv("TARGET_PLATFORMS", "tiktok,youtube").split(",")]
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
     base = f"harvest_{now}"
-    stats = {"found":0,"dl":0,"dummy":0}
+    stats = {"found": 0, "downloaded": 0, "dummy": 0}
 
-    for p in plats:
-        print(f"🔍 {p} | niche={niche}")
+    for platform in platforms:
+        print(f"\n🔍 Fetching {platform} | niche={niche}")
         try:
-            vids = fetch_top_videos(p, niche, api_key)
+            videos = fetch_top_videos(platform, niche, api_key)
         except Exception as e:
             print(f"❌ API error: {e}")
-            vids = []
-        stats["found"] += len(vids)
-        dest = os.path.join(base,p)
-        if vids:
-            for i,v in enumerate(vids,1):
-                name=f"{p}_{i}.mp4"
+            videos = []
+        stats["found"] += len(videos)
+        dest_folder = os.path.join(base, platform)
+
+        if videos:
+            for i, v in enumerate(videos, start=1):
+                filename = f"{platform}_{i}.mp4"
                 try:
-                    print(f"⬇️ {v['url']}")
-                    path=download_video(v["url"],dest,name)
-                    print(f"✅ {path}")
-                    stats["dl"]+=1
-                except:
-                    path=create_dummy(dest,name)
-                    print(f"📝 dummy {path}")
-                    stats["dummy"]+=1
+                    print(f"⬇️ Downloading: {v['url']}")
+                    path = download_video(v["url"], dest_folder, filename)
+                    print(f"   ✅ Saved: {path}")
+                    stats["downloaded"] += 1
+                except Exception as e:
+                    path = create_dummy(dest_folder, filename)
+                    print(f"   📝 Dummy file: {path}")
+                    stats["dummy"] += 1
         else:
+            print("❌ No videos found, creating dummy files")
             for i in range(2):
-                name=f"{p}_dummy_{i+1}.mp4"
-                path=create_dummy(dest,name)
-                print(f"📝 {path}")
-                stats["dummy"]+=1
+                filename = f"{platform}_dummy_{i+1}.mp4"
+                path = create_dummy(dest_folder, filename)
+                print(f"   📝 Created: {path}")
+                stats["dummy"] += 1
 
-    print("================================")
-    print(f"🔍 found={stats['found']}  ⬇️ downloaded={stats['dl']}  📝 dummy={stats['dummy']}")
-    print(f"📂 {base}")
+    print("\n" + "="*50)
+    print(f"🔍 Found: {stats['found']}  ⬇️ Downloaded: {stats['downloaded']}  📝 Dummy: {stats['dummy']}")
+    print(f"📂 Output folder: {base}")
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
