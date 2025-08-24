@@ -78,7 +78,7 @@ jobs:
         if: always()
         with:
           name: intelligent-harvest-ai-results-${{ github.run_number }}
-          path: intelligent_harvest/
+          path: harvest/
           retention-days: 14
           if-no-files-found: error
 
@@ -87,7 +87,7 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./intelligent_harvest
+          publish_dir: ./harvest
           destination_dir: intelligent-video-ai
 
       - name: 🎊 AI Success Notification
