@@ -39,8 +39,8 @@ jobs:
       - name: 📦 تثبيت المكتبات المطلوبة
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install moviepy
+          pip install yt-dlp instaloader requests beautifulsoup4 tqdm numpy pillow
+          pip install moviepy google-api-python-client google-auth google-auth-oauthlib
 
       - name: 🔥 تشغيل نظام حاصد الفيديوهات
         env:
