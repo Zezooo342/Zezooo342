@@ -1,13 +1,11 @@
-requests>=2.31.0
-yt-dlp>=2023.7.6
-instaloader>=4.10.3
-
-moviepy>=2.2.1    # ← تأكد من وجود هذا السطر
-pillow>=10.0.0
-
-google-api-python-client>=2.100.0
-google-auth>=2.23.0
-
-beautifulsoup4>=4.12.0
-tqdm>=4.66.0
-numpy>=1.24.0
+moviepy>=2.2.1
+yt-dlp
+instaloader
+requests
+beautifulsoup4
+tqdm
+numpy
+pillow
+google-api-python-client
+google-auth
+google-auth-oauthlib
