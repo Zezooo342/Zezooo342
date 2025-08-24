@@ -35,10 +35,10 @@ def fetch_top_videos(platform: str, niche: str, api_key: str) -> List[Dict]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": MODEL,
-        "query": prompt
-    }
+payload = {
+    "model": MODEL,
+    "prompt": prompt
+}
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
     content = resp.json()["choices"][0]["message"]["content"]
