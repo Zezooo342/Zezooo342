@@ -14,8 +14,10 @@ from typing import List, Dict
 # دعم UTF-8 للإخراج
 sys.stdout.reconfigure(encoding='utf-8')
 
-API_URL = "https://api.perplexity.ai/chat/completions"
-MODEL   = "llama-3.1-sonar-large-128k-online"
+{
+  "query": "List top 5 trending tiktok & facebook & instgram videos in comedy niche with direct .mp4 links."
+  "model": "llama-3.1-sonar-large-128k-online",
+}
 
 def get_api_key() -> str:
     raw = os.getenv("PERPLEXITY_API_KEY", "")
@@ -27,7 +29,7 @@ def get_api_key() -> str:
         raise RuntimeError("🔑 PERPLEXITY_API_KEY غير مضبوط أو غير صالح")
     return key
 
-def fetch_top_videos(platform: str, niche: str, api_key: str) -> List[Dict]:
+def fetch_top_videos(platform: str, niche: str, api_key: str):
     prompt = (
         f"List top 5 trending {platform} videos in the {niche} niche "
         "with direct .mp4 download URLs."
@@ -36,12 +38,13 @@ def fetch_top_videos(platform: str, niche: str, api_key: str) -> List[Dict]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    payload = {"model": MODEL, "messages":[{"role":"user","content":prompt}]}
+    payload = {
+        "model": MODEL,
+        "query": prompt
+    }
     resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
-    text = resp.json()["choices"][0]["message"]["content"]
-    urls = re.findall(r'https?://\S+?\.mp4', text)
-    return [{"url": u, "title": f"video_{i+1}"} for i,u in enumerate(urls[:5])]
+    # … بقية المعالجة كما هو  
 
 def download_video(url: str, dest: str, name: str) -> str:
     os.makedirs(dest, exist_ok=True)
