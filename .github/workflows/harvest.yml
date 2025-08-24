@@ -1,10 +1,10 @@
-name: 🔥 Video Downloader via Perplexity
+name: 🔥 Smart Video Harvester
 
 on:
   workflow_dispatch:
 
 jobs:
-  download:
+  harvest:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -15,20 +15,20 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: 3.10
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run downloader
+      - name: Run harvester
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           NICHE: ضحك
           TARGET_PLATFORMS: tiktok,youtube,instagram,facebook
         run: python smart_page_creator.py
 
-      - name: List downloaded files
+      - name: List results
         run: |
-          ls intelligent_harvest_* || echo "لا توجد ملفات محمّلة بعد"
+          ls harvest_* || echo "لا توجد ملفات"
