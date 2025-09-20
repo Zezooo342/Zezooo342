@@ -1,0 +1,15 @@
+# Environment
+.env
+.env.*
+.venv/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Node / build
+node_modules/
+dist/
+.build/
+.cache/
